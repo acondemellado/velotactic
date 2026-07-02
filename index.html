@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VELOTACTIC — All of cycling, in one app</title>
+<meta name="description" content="Live data, stage analysis, climb predictions, tire pressure, gears and historical data — every tool a rider, a team and a journalist needs, on your phone and iPad.">
+<style>
+  :root{
+    --bg:#07090c;
+    --panel:#12161d;
+    --line:rgba(255,255,255,.09);
+    --txt:#eef2f6;
+    --muted:#8b95a5;
+    --lime:#c6ff00;
+    --cyan:#12e6c8;
+    --violet:#8b5cff;
+    /* app profile palette */
+    --navy:#17233d;
+    --green:#7cc242;
+    --yellow:#f2c94c;
+    --blue:#4aa3df;
+    --red:#e0563f;
+    --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font);background:var(--bg);color:var(--txt);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+  /* background: glows + faint topo/route lines */
+  .bg-fx{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .glow{position:absolute;border-radius:50%;filter:blur(110px);opacity:.30}
+  .g1{width:540px;height:540px;background:var(--cyan);top:-180px;left:-160px;animation:f1 18s ease-in-out infinite}
+  .g2{width:480px;height:480px;background:var(--lime);bottom:-180px;right:-140px;opacity:.18;animation:f2 22s ease-in-out infinite}
+  @keyframes f1{0%,100%{transform:translate(0,0)}50%{transform:translate(50px,40px)}}
+  @keyframes f2{0%,100%{transform:translate(0,0)}50%{transform:translate(-40px,-40px)}}
+  .topo{position:absolute;inset:0;opacity:.05;background-image:
+    repeating-linear-gradient(115deg,transparent 0 38px,rgba(255,255,255,.6) 38px 39px);}
+
+  /* nav */
+  header{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);background:rgba(7,9,12,.55);transition:.3s}
+  header.scrolled{background:rgba(7,9,12,.9);border-bottom:1px solid var(--line)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:68px}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:-.02em;font-size:19px}
+  .logo b{color:var(--lime)}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:15px;padding:11px 22px;border-radius:999px;cursor:pointer;transition:transform .15s,box-shadow .25s;border:1px solid transparent}
+  .btn:hover{transform:translateY(-2px)}
+  .btn-primary{background:var(--lime);color:#07090c;box-shadow:0 8px 30px rgba(198,255,0,.25)}
+  .btn-primary:hover{box-shadow:0 12px 40px rgba(198,255,0,.4)}
+  .btn-ghost{border-color:var(--line);color:var(--txt)}
+  .btn-ghost:hover{border-color:var(--muted)}
+
+  /* hero */
+  .hero{position:relative;z-index:1;padding:130px 0 70px}
+  .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}
+  .pill{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--cyan);border:1px solid rgba(18,230,200,.3);background:rgba(18,230,200,.06);padding:7px 15px;border-radius:999px;margin-bottom:28px}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  h1{font-size:clamp(42px,6vw,74px);line-height:1.02;letter-spacing:-.035em;font-weight:800;max-width:14ch}
+  h1 .grad{background:linear-gradient(100deg,var(--lime),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p.sub{margin-top:24px;font-size:clamp(17px,2vw,21px);color:var(--muted);max-width:50ch}
+  .hero-actions{margin-top:36px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .note{color:var(--muted);font-size:14px}
+
+  /* iPad mockup */
+  .ipad{position:relative;justify-self:center;width:100%;max-width:560px;
+    background:linear-gradient(160deg,#1b212b,#0c0f14);border:1px solid rgba(255,255,255,.12);
+    border-radius:26px;padding:14px;box-shadow:0 44px 100px rgba(0,0,0,.6)}
+  .ipad::after{content:"";position:absolute;top:50%;right:7px;width:6px;height:52px;transform:translateY(-50%);
+    background:rgba(255,255,255,.08);border-radius:3px}
+  .screen{width:100%;aspect-ratio:2210/886;border-radius:12px;background:#f4f6f9;overflow:hidden;position:relative;display:flex;color:var(--navy)}
+  .shot{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:5;border-radius:12px}
+  /* left mini-map */
+  .map{width:42%;position:relative;background:linear-gradient(135deg,#e8efe4,#dfe9f0)}
+  .map .roads{position:absolute;inset:0;opacity:.5;
+    background-image:repeating-linear-gradient(60deg,transparent 0 22px,rgba(120,140,120,.25) 22px 23px),
+    repeating-linear-gradient(-40deg,transparent 0 30px,rgba(120,140,120,.18) 30px 31px)}
+  .route{position:absolute;inset:0}
+  .wp{position:absolute;width:26px;height:26px;border-radius:50%;transform:translate(-50%,-50%);opacity:.55}
+  .warn{position:absolute;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+  /* right panel */
+  .panel{flex:1;background:#fbfcfd;padding:14px 16px;display:flex;flex-direction:column}
+  .p-top{display:flex;justify-content:space-between;align-items:center}
+  .p-top .done{font-weight:800;font-size:14px;letter-spacing:-.01em}
+  .p-top .icons{display:flex;gap:8px;color:#5b6472}
+  .next{color:#8b95a5;font-size:11px;margin-top:8px}
+  .arrows{display:flex;gap:7px;margin-top:6px;font-size:9px;font-weight:700}
+  .arrows span{display:flex;flex-direction:column;align-items:center;gap:1px;color:var(--navy)}
+  .arrows .a{font-size:11px}
+  .arrows .up{color:var(--yellow)} .arrows .dn{color:var(--red)} .arrows .fl{color:var(--green)}
+  .prof{margin-top:8px;height:70px;width:100%}
+  .axis{display:flex;justify-content:space-between;font-size:8px;color:#9aa4b2;margin-top:2px}
+  .wps-title{font-weight:800;font-size:12px;margin-top:12px}
+  .wp-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid #eef1f5;font-size:11px}
+  .wp-row .l{display:flex;gap:7px;align-items:center}
+  .wp-row .l .mk{color:var(--red)} .wp-row .name{font-weight:700}
+  .wp-row .sub{color:#9aa4b2;font-size:9px}
+  .wp-row .to{color:#9aa4b2}
+  .float-badge{position:absolute;background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:10px 13px;box-shadow:0 18px 44px rgba(0,0,0,.5);z-index:3;animation:bob 5s ease-in-out infinite}
+  .fb1{top:-22px;left:-26px} .fb2{bottom:-20px;right:-24px;animation-delay:1.2s}
+  .float-badge .t{font-size:10px;color:var(--muted)}
+  .float-badge .v{font-size:17px;font-weight:800}
+  .float-badge .v.lime{color:var(--lime)} .float-badge .v.cyan{color:var(--cyan)}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+  /* tools strip */
+  .tools{position:relative;z-index:1;padding:70px 0 40px}
+  .lead{text-align:center;font-size:14px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+  .tools h2{text-align:center;font-size:clamp(26px,3.6vw,40px);letter-spacing:-.02em;max-width:22ch;margin:0 auto 46px}
+  .tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .tool{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;transition:transform .25s,border-color .25s}
+  .tool:hover{transform:translateY(-4px);border-color:var(--muted)}
+  .tool .ti{font-size:22px;margin-bottom:12px}
+  .tool h4{font-size:16px}
+  .tool p{color:var(--muted);font-size:14px;margin-top:6px}
+
+  /* verticals */
+  .verts{position:relative;z-index:1;padding:60px 0 110px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:20px}
+  .card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:32px 28px;overflow:hidden;transition:transform .3s,border-color .3s}
+  .card:hover{transform:translateY(-6px)}
+  .card .bar{position:absolute;top:0;left:0;right:0;height:4px}
+  .c1 .bar{background:var(--lime)} .c1:hover{border-color:rgba(198,255,0,.4)}
+  .c2 .bar{background:var(--cyan)} .c2:hover{border-color:rgba(18,230,200,.4)}
+  .c3 .bar{background:var(--violet)} .c3:hover{border-color:rgba(139,92,255,.45)}
+  .ico{width:62px;height:62px;border-radius:18px;display:grid;place-items:center;margin-bottom:20px;position:relative;transition:transform .3s}
+  .card:hover .ico{transform:scale(1.06) rotate(-3deg)}
+  .ico::after{content:"";position:absolute;inset:0;border-radius:18px;opacity:.4;filter:blur(14px);z-index:-1}
+  .c1 .ico{background:linear-gradient(150deg,rgba(198,255,0,.28),rgba(198,255,0,.05));color:var(--lime);box-shadow:inset 0 0 0 1px rgba(198,255,0,.3)}
+  .c1 .ico::after{background:var(--lime)}
+  .c2 .ico{background:linear-gradient(150deg,rgba(18,230,200,.28),rgba(18,230,200,.05));color:var(--cyan);box-shadow:inset 0 0 0 1px rgba(18,230,200,.3)}
+  .c2 .ico::after{background:var(--cyan)}
+  .c3 .ico{background:linear-gradient(150deg,rgba(139,92,255,.32),rgba(139,92,255,.06));color:var(--violet);box-shadow:inset 0 0 0 1px rgba(139,92,255,.35)}
+  .c3 .ico::after{background:var(--violet)}
+  .card h3{font-size:21px;letter-spacing:-.01em}
+  .card .who{font-size:13px;color:var(--muted);margin-top:3px}
+  .card p{color:#c2cad5;font-size:15px;margin-top:14px}
+
+  /* closing */
+  .close{position:relative;z-index:1;text-align:center;padding:10px 0 130px}
+  .close h2{font-size:clamp(28px,4.4vw,46px);letter-spacing:-.02em;line-height:1.1;max-width:20ch;margin:0 auto}
+  .close .btn{margin-top:32px}
+
+  footer{position:relative;z-index:1;border-top:1px solid var(--line);padding:30px 0;text-align:center;color:var(--muted);font-size:13px}
+
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  @media(max-width:900px){
+    .hero-grid{grid-template-columns:1fr;gap:44px}
+    .tgrid,.grid{grid-template-columns:1fr}
+    .ipad{max-width:440px}
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-fx"><div class="topo"></div><div class="glow g1"></div><div class="glow g2"></div></div>
+
+<header id="nav">
+  <div class="wrap nav-in">
+    <a href="#" class="logo">
+      <svg width="28" height="28" viewBox="0 0 40 40" fill="none"><path d="M20 3 L33 12 V28 L20 37 L7 28 V12 Z" stroke="#c6ff00" stroke-width="2.4"/><path d="M13 24 L18 15 L22 22 L27 13" stroke="#12e6c8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      VELOTACTIC
+    </a>
+    <a href="#start" class="btn btn-primary">Get started</a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero wrap">
+  <div class="hero-grid">
+    <div>
+      <span class="pill reveal"><span class="dot"></span>Live data · Stage analysis · Power</span>
+      <h1 class="reveal">All of cycling,<br><span class="grad">in one app.</span></h1>
+      <p class="sub reveal">Route, profile, climbs, gears, tire pressure and live data — every tool a rider, a team and a journalist needs, right on your phone and iPad.</p>
+      <div class="hero-actions reveal">
+        <a href="#start" class="btn btn-primary">Get started free →</a>
+        <a href="#tools" class="btn btn-ghost">See the tools</a>
+        <span class="note">No card · Cancel anytime</span>
+      </div>
+    </div>
+
+    <!-- iPad mockup -->
+    <div class="ipad reveal">
+      <div class="float-badge fb1"><div class="t">Climb prediction</div><div class="v lime">7:42 <span style="font-size:11px;color:var(--muted)">to top</span></div></div>
+      <div class="float-badge fb2"><div class="t">Tire pressure</div><div class="v cyan">72 <span style="font-size:11px;color:var(--muted)">psi</span></div></div>
+      <div class="screen">
+        <img class="shot" src="app-preview.png" alt="VELOTACTIC app" onerror="this.style.display='none'">
+        <div class="map">
+          <div class="roads"></div>
+          <svg class="route" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path d="M18 20 Q40 26 46 48 T60 92" fill="none" stroke="#8b5cff" stroke-width="3" stroke-linecap="round" opacity=".85"/>
+          </svg>
+          <div class="wp" style="top:20%;left:18%;background:#8b5cff"></div>
+          <div class="wp" style="top:34%;left:34%;background:#8b5cff"></div>
+          <div class="wp" style="top:52%;left:46%;background:#e0563f"></div>
+          <div class="wp" style="top:74%;left:55%;background:#8b5cff"></div>
+          <div class="warn" style="top:14%;left:26%;color:#e0563f">⚠</div>
+          <div class="warn" style="top:60%;left:54%;color:#e0563f">⚠</div>
+          <div class="warn" style="top:48%;left:44%;color:#4aa3df">🍴</div>
+        </div>
+        <div class="panel">
+          <div class="p-top">
+            <span class="done">0.0 km done · 185.8 to go</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="color:var(--navy)"><path d="M3 8h11a3 3 0 100-6M3 14h15a3 3 0 110 6M3 11h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <div class="next">Next 50 km</div>
+          <div class="arrows">
+            <span><span class="a fl">→</span>+0%</span>
+            <span><span class="a dn">←</span>-0%</span>
+            <span><span class="a up">↓</span>-1%</span>
+            <span><span class="a fl">→</span>+2%</span>
+            <span><span class="a fl">→</span>+4%</span>
+            <span><span class="a fl">→</span>-1%</span>
+            <span><span class="a up">↑</span>-0%</span>
+          </div>
+          <svg class="prof" id="prof" viewBox="0 0 240 70" preserveAspectRatio="none"></svg>
+          <div class="axis"><span>1</span><span>8</span><span>15</span><span>22</span><span>29</span><span>36</span><span>43</span><span>50</span></div>
+          <div class="wps-title">Upcoming waypoints</div>
+          <div class="wp-row">
+            <span class="l"><span class="mk">📍</span><span><span class="name">km 0</span><br><span class="sub">km 0</span></span></span>
+            <span class="to">3.8 km to go</span>
+          </div>
+          <div class="wp-row">
+            <span class="l"><span class="mk">⚠</span><span><span class="name">Roundabout</span><br><span class="sub">Roundabout</span></span></span>
+            <span class="to">5.3 km to go</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TOOLS -->
+<section class="tools wrap" id="tools">
+  <div class="lead reveal">Everything, in one place</div>
+  <h2 class="reveal">Not another dashboard. The whole toolbox.</h2>
+  <div class="tgrid">
+    <div class="tool reveal"><div class="ti">📈</div><h4>Stage analysis</h4><p>Profile, gradients, wind and key moments — summarized automatically.</p></div>
+    <div class="tool reveal"><div class="ti">⛰️</div><h4>Climb predictions</h4><p>Know time-to-top, effort and pacing before you hit the slope.</p></div>
+    <div class="tool reveal"><div class="ti">🛞</div><h4>Tire pressure</h4><p>Recommended pressures for the road, weather and your setup.</p></div>
+    <div class="tool reveal"><div class="ti">⚙️</div><h4>Gears</h4><p>Gear ratios and shifting insights matched to every section.</p></div>
+    <div class="tool reveal"><div class="ti">⚡</div><h4>Live data</h4><p>Power, cadence, speed and gaps, updated in real time.</p></div>
+    <div class="tool reveal"><div class="ti">🗄️</div><h4>Historical data</h4><p>Past editions, rider records and trends at your fingertips.</p></div>
+  </div>
+</section>
+
+<!-- VERTICALS -->
+<section class="verts wrap">
+  <div class="lead reveal">One app. Three ways to ride it.</div>
+  <div class="grid">
+    <div class="card c1 reveal">
+      <div class="bar"></div>
+      <div class="ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="3.3"/><circle cx="18.5" cy="17.5" r="3.3"/><path d="M5.5 17.5 L10 9.5 H14.5 L18.5 17.5"/><path d="M10 9.5 L8 6.5 H6"/><circle cx="15.5" cy="5.2" r="1.5"/><path d="M15.5 6.7 L14 10.5 H10.2"/></svg></div>
+      <h3>Individual</h3>
+      <div class="who">Riders & enthusiasts</div>
+      <p>Train, analyze and relive every ride with data you actually understand.</p>
+    </div>
+    <div class="card c2 reveal">
+      <div class="bar"></div>
+      <div class="ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.2 L6 5 L4.3 8.3 L6.8 9.6 V20.5 H17.2 V9.6 L19.7 8.3 L18 5 L15 3.2 C14 5.4 10 5.4 9 3.2 Z"/><path d="M12 8 V12"/><path d="M10 10 H14"/></svg></div>
+      <h3>Team</h3>
+      <div class="who">Pro teams & clubs</div>
+      <p>Live telemetry, tactics and rival analysis — the command center for race day.</p>
+    </div>
+    <div class="card c3 reveal">
+      <div class="bar"></div>
+      <div class="ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="2.2"/><path d="M8.4 10.4 a6 6 0 0 0 0 7.2"/><path d="M15.6 10.4 a6 6 0 0 1 0 7.2"/><path d="M5.8 7.8 a10 10 0 0 0 0 12.4"/><path d="M18.2 7.8 a10 10 0 0 1 0 12.4"/></svg></div>
+      <h3>TV & Press</h3>
+      <div class="who">Broadcasters & journalists</div>
+      <p>Broadcast-ready stage analysis and exportable stats — the story, with the numbers.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CLOSING -->
+<section class="close wrap" id="start">
+  <h2 class="reveal">The tools cycling has been waiting for.</h2>
+  <a href="#" class="btn btn-primary reveal">Get started free →</a>
+</section>
+
+<footer><div class="wrap">© 2026 VELOTACTIC — Made for everyone who lives every watt.</div></footer>
+
+<script>
+  const nav=document.getElementById('nav');
+  addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>10));
+
+  // reveal
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach((el,i)=>{el.style.transitionDelay=(i%3)*80+'ms';io.observe(el);});
+
+  // build elevation profile (bars colored by steepness, like the app)
+  (function(){
+    const W=240,H=70,N=90;
+    const el=[];
+    for(let i=0;i<N;i++){
+      const x=i/(N-1);
+      const rolling=Math.sin(x*22)*1.4+Math.sin(x*7)*2;         // small hills
+      const climb=Math.exp(-Math.pow((x-0.62)/0.11,2))*46;      // the big climb ~km 33-40
+      el.push(4+rolling+climb);
+    }
+    const max=Math.max(...el)*1.12;
+    const svg=document.getElementById('prof');
+    let out='';
+    const bw=W/N;
+    for(let i=0;i<N;i++){
+      const h=el[i]/max*H;
+      const slope=i>0?el[i]-el[i-1]:0;
+      let c='#7cc242';                       // gentle green
+      if(slope>1.6)c='#4aa3df';              // steep blue
+      else if(slope>0.5)c='#f2c94c';         // moderate yellow
+      out+=`<rect x="${(i*bw).toFixed(2)}" y="${(H-h).toFixed(2)}" width="${(bw+0.4).toFixed(2)}" height="${h.toFixed(2)}" fill="${c}"/>`;
+    }
+    // outline
+    let d='M0 '+H;
+    for(let i=0;i<N;i++){d+=` L${(i*bw).toFixed(2)} ${(H-el[i]/max*H).toFixed(2)}`;}
+    d+=` L${W} ${H} Z`;
+    out+=`<path d="${d}" fill="none" stroke="#3b475e" stroke-width="1"/>`;
+    svg.innerHTML=out;
+  })();
+</script>
+</body>
+</html>
